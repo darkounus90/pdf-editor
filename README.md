@@ -66,6 +66,34 @@ Para sumar PDFs reales (anonimizados) al corpus, ver [`packages/pdf-core/tests/c
 
 La CI (`.github/workflows/ci.yml`) instala, chequea tipos, corre las pruebas y hace el build en cada push a `main` y en cada pull request.
 
+## Despliegue
+
+Producción corre en un VPS con Docker Compose (`deploy/`):
+
+| Servicio | Qué hace |
+| --- | --- |
+| `caddy` | Único que publica puertos (80/443). Saca el certificado HTTPS solo, redirige `www` al dominio principal y hace de proxy hacia la web. |
+| `web` | Next.js en modo `standalone` (`deploy/Dockerfile`), solo en la red interna de Docker. |
+
+Los puertos que publica Docker se saltan `ufw`: no agregues `ports:` a otros servicios; usa `expose:`.
+
+Primera vez, en el servidor:
+
+```bash
+git clone https://github.com/darkounus90/pdf-editor.git ~/renglon
+cd ~/renglon/deploy
+cp .env.example .env   # completar DOMAIN y ACME_EMAIL
+docker compose up -d --build
+```
+
+Para actualizar a la última versión de `main`:
+
+```bash
+~/renglon/deploy/update.sh
+```
+
+Para probar la salida de producción sin Docker: `NEXT_OUTPUT=standalone pnpm --filter @pdf-editor/web build`.
+
 ## Qué hace
 
 - **Análisis**: metadatos, versión, tamaño de página (A4, Carta, Oficio…), campos de formulario, conteo de líneas y palabras, fuentes reales (nombre, negrita/cursiva, tamaños) y detección de páginas sin texto (escaneos que necesitarían OCR).
