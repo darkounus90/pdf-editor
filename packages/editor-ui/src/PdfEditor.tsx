@@ -1,4 +1,19 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type DragEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type DragEvent } from "react";
+import {
+  CircleAlert,
+  CircleCheck,
+  Download,
+  FileText,
+  FileUp,
+  FolderOpen,
+  Lock,
+  Minus,
+  MousePointer2,
+  Plus,
+  Redo2,
+  TextCursorInput,
+  Undo2,
+} from "lucide-react";
 import type { PDFDocumentProxy } from "@pdf-editor/pdf-core";
 import {
   addedToObject,
@@ -26,6 +41,7 @@ import {
 } from "@pdf-editor/pdf-core";
 import { downloadBytes, enrichOffscreen, setupBrowserPdfjs } from "@pdf-editor/pdf-core/browser";
 import { EditorContext, type EditorApi, type Mode } from "./context";
+import { Brand } from "./components/Brand";
 import { PageView } from "./components/PageView";
 import { Sidebar } from "./components/Sidebar";
 
@@ -36,6 +52,13 @@ interface LoadedDoc {
 }
 
 const ZOOMS = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
+
+/** Zoom inicial: 125 % si cabe; en pantallas angostas, el mayor que deje ver la página completa. */
+function fitZoom(pageWidth: number): number {
+  const available = window.innerWidth - (window.innerWidth > 900 ? 324 + 64 : 32);
+  const fitting = ZOOMS.filter((z) => z <= 1.25 && pageWidth * z <= available);
+  return fitting.length ? fitting[fitting.length - 1] : ZOOMS[0];
+}
 
 export interface PdfEditorProps {
   /** URL de la carpeta con los assets de pdf.js (worker, cmaps, fuentes estándar, wasm, ICC). */
@@ -57,7 +80,7 @@ export function PdfEditor({ assetsUrl = "/pdfjs/", sampleUrl = "/ejemplo.pdf", a
   const [mode, setMode] = useState<Mode>("edit");
   const [zoom, setZoom] = useState(1.25);
   const [search, setSearch] = useState({ query: "", replace: "", caseSensitive: false });
-  const [busy, setBusy] = useState<string | null>(null);
+  const [busy, setBusy] = useState<{ text: string; progress?: number } | null>(null);
   const [toast, setToast] = useState<{ text: string; kind: "ok" | "error" } | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -75,14 +98,14 @@ export function PdfEditor({ assetsUrl = "/pdfjs/", sampleUrl = "/ejemplo.pdf", a
 
   const loadBytes = useCallback(
     async (bytes: Uint8Array, fileName: string) => {
-      setBusy("Analizando PDF…");
+      setBusy({ text: "Abriendo el PDF…" });
       try {
         setupBrowserPdfjs({ assetsUrl });
         const pdf = await openPdf(bytes);
         const info = await readDocInfo(pdf, fileName, bytes.byteLength);
         const all: TextBlock[][] = [];
         for (let i = 0; i < pdf.numPages; i++) {
-          setBusy(`Analizando página ${i + 1} de ${pdf.numPages}…`);
+          setBusy({ text: `Analizando página ${i + 1} de ${pdf.numPages}…`, progress: (i + 1) / pdf.numPages });
           all.push(await extractBlocks(await pdf.getPage(i + 1), i));
         }
         setDoc((prev) => {
@@ -90,6 +113,7 @@ export function PdfEditor({ assetsUrl = "/pdfjs/", sampleUrl = "/ejemplo.pdf", a
           return { pdf, bytes, info };
         });
         setBlocks(all);
+        setZoom(fitZoom(info.pages[0]?.width ?? 612));
         dispatch({ type: "reset" });
         setDraft(null);
         setSelectedId(null);
@@ -225,7 +249,7 @@ export function PdfEditor({ assetsUrl = "/pdfjs/", sampleUrl = "/ejemplo.pdf", a
     if (!doc) return;
     setSelectedId(null);
     setDraft(null);
-    setBusy("Generando PDF…");
+    setBusy({ text: "Generando tu PDF…" });
     try {
       // Las páginas editadas que nunca se renderizaron (p. ej. por reemplazar todo)
       // necesitan colores y fuentes antes de exportar.
@@ -311,57 +335,94 @@ export function PdfEditor({ assetsUrl = "/pdfjs/", sampleUrl = "/ejemplo.pdf", a
         onDrop={onDrop}
       >
         <header className="topbar">
-          <BrandLink href={homeHref}>
-            <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
-              <path d="M6 2h8l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="var(--accent)" />
-              <path d="M14 2v5h5" fill="#fff" opacity=".55" />
-              <path d="M8 17l1.2-3.6L15 7.6l2.4 2.4-5.8 5.8L8 17z" fill="#fff" />
-            </svg>
-            <span>Editor PDF</span>
-            {doc && <span className="doc-name" title={doc.info.fileName}>{doc.info.fileName}</span>}
-          </BrandLink>
+          <div className="topbar-left">
+            <Brand href={homeHref} />
+            {doc && (
+              <span className="doc-pill" title={doc.info.fileName}>
+                <FileText size={15} aria-hidden />
+                <span className="name">{doc.info.fileName}</span>
+                <span className="meta">
+                  · {doc.info.numPages} {doc.info.numPages === 1 ? "pág." : "págs."}
+                </span>
+              </span>
+            )}
+          </div>
 
-          {doc && (
+          {doc ? (
             <div className="tools">
-              <div className="segmented" role="radiogroup" aria-label="Modo">
-                <button className={mode === "edit" ? "active" : ""} onClick={() => setMode("edit")} title="Clic en un texto para editarlo">
-                  Editar texto
+              <div className="segmented" role="radiogroup" aria-label="Modo" data-active={mode === "add" ? 1 : 0}>
+                <span className="thumb" aria-hidden />
+                <button
+                  role="radio"
+                  aria-checked={mode === "edit"}
+                  className={mode === "edit" ? "active" : ""}
+                  onClick={() => setMode("edit")}
+                  title="Clic en un texto para editarlo"
+                >
+                  <MousePointer2 size={15} aria-hidden />
+                  <span>Editar</span>
                 </button>
-                <button className={mode === "add" ? "active" : ""} onClick={() => setMode("add")} title="Clic en la página para agregar texto">
-                  + Agregar texto
+                <button
+                  role="radio"
+                  aria-checked={mode === "add"}
+                  className={mode === "add" ? "active" : ""}
+                  onClick={() => setMode("add")}
+                  title="Clic en la página para agregar texto"
+                >
+                  <TextCursorInput size={15} aria-hidden />
+                  <span>Agregar texto</span>
                 </button>
               </div>
               <span className="sep" />
-              <button className="icon-btn" onClick={undo} disabled={!history.past.length} title="Deshacer (Ctrl+Z)">
-                ↶
+              <button className="icon-btn" onClick={undo} disabled={!history.past.length} title="Deshacer (Ctrl+Z)" aria-label="Deshacer">
+                <Undo2 size={17} />
               </button>
-              <button className="icon-btn" onClick={redo} disabled={!history.future.length} title="Rehacer (Ctrl+Y)">
-                ↷
+              <button className="icon-btn" onClick={redo} disabled={!history.future.length} title="Rehacer (Ctrl+Y)" aria-label="Rehacer">
+                <Redo2 size={17} />
               </button>
               <span className="sep" />
-              <button className="icon-btn" onClick={() => setZoom(ZOOMS[Math.max(0, ZOOMS.indexOf(zoom) - 1)])} disabled={zoom === ZOOMS[0]} title="Alejar">
-                −
-              </button>
-              <select className="zoom" value={zoom} onChange={(e) => setZoom(Number(e.target.value))} aria-label="Zoom">
-                {ZOOMS.map((z) => (
-                  <option key={z} value={z}>
-                    {Math.round(z * 100)}%
-                  </option>
-                ))}
-              </select>
-              <button className="icon-btn" onClick={() => setZoom(ZOOMS[Math.min(ZOOMS.length - 1, ZOOMS.indexOf(zoom) + 1)])} disabled={zoom === ZOOMS[ZOOMS.length - 1]} title="Acercar">
-                +
-              </button>
+              <div className="zoom-group">
+                <button
+                  className="icon-btn"
+                  onClick={() => setZoom(ZOOMS[Math.max(0, ZOOMS.indexOf(zoom) - 1)])}
+                  disabled={zoom === ZOOMS[0]}
+                  title="Alejar"
+                  aria-label="Alejar"
+                >
+                  <Minus size={16} />
+                </button>
+                <select className="zoom" value={zoom} onChange={(e) => setZoom(Number(e.target.value))} aria-label="Zoom">
+                  {ZOOMS.map((z) => (
+                    <option key={z} value={z}>
+                      {Math.round(z * 100)}%
+                    </option>
+                  ))}
+                </select>
+                <button
+                  className="icon-btn"
+                  onClick={() => setZoom(ZOOMS[Math.min(ZOOMS.length - 1, ZOOMS.indexOf(zoom) + 1)])}
+                  disabled={zoom === ZOOMS[ZOOMS.length - 1]}
+                  title="Acercar"
+                  aria-label="Acercar"
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
             </div>
+          ) : (
+            <span />
           )}
 
           <div className="actions">
-            <button className="btn" onClick={() => fileInput.current?.click()}>
-              Abrir PDF
+            <button className={`btn ${doc ? "ghost" : ""}`} onClick={() => fileInput.current?.click()} title="Abrir otro PDF">
+              <FolderOpen size={16} aria-hidden />
+              <span>Abrir</span>
             </button>
             {doc && (
               <button className="btn primary" onClick={download} disabled={!!busy}>
-                Descargar{changes ? ` (${changes})` : ""}
+                <Download size={16} aria-hidden />
+                Descargar
+                {changes > 0 && <span className="count">{changes}</span>}
               </button>
             )}
           </div>
@@ -393,7 +454,10 @@ export function PdfEditor({ assetsUrl = "/pdfjs/", sampleUrl = "/ejemplo.pdf", a
             <main className={`viewer ${mode === "add" ? "adding" : ""}`}>
               {mode === "add" && (
                 <div className="hint">
-                  <span>Haz clic en la página donde quieras escribir · Esc para cancelar</span>
+                  <span>
+                    <TextCursorInput size={15} aria-hidden />
+                    Haz clic en la página donde quieras escribir <kbd>Esc</kbd>
+                  </span>
                 </div>
               )}
               {doc.info.pages.map((p) => (
@@ -412,44 +476,72 @@ export function PdfEditor({ assetsUrl = "/pdfjs/", sampleUrl = "/ejemplo.pdf", a
         )}
 
         {busy && (
-          <div className="busy">
-            <div className="spinner" />
-            {busy}
+          <div className="busy" role="status" aria-live="polite">
+            <div className="busy-card">
+              {busy.text}
+              <div className={`progress ${busy.progress === undefined ? "indeterminate" : ""}`}>
+                <span style={busy.progress === undefined ? undefined : { width: `${Math.round(busy.progress * 100)}%` }} />
+              </div>
+            </div>
           </div>
         )}
-        {toast && <div className={`toast ${toast.kind}`}>{toast.text}</div>}
-        {dragOver && <div className="drop-zone">Suelta el PDF para abrirlo</div>}
+        {toast && (
+          <div className={`toast ${toast.kind}`} role={toast.kind === "error" ? "alert" : "status"} key={toast.text}>
+            {toast.kind === "error" ? <CircleAlert size={18} aria-hidden /> : <CircleCheck size={18} aria-hidden />}
+            {toast.text}
+          </div>
+        )}
+        {dragOver && (
+          <div className="drop-zone">
+            <div>
+              <FileUp size={40} strokeWidth={1.75} aria-hidden />
+              Suelta el PDF para abrirlo
+            </div>
+          </div>
+        )}
       </div>
     </EditorContext.Provider>
-  );
-}
-
-function BrandLink({ href, children }: { href?: string; children: ReactNode }) {
-  return href ? (
-    <a className="brand" href={href}>
-      {children}
-    </a>
-  ) : (
-    <div className="brand">{children}</div>
   );
 }
 
 function EmptyState({ onOpen, onSample }: { onOpen: () => void; onSample: () => void }) {
   return (
     <div className="empty">
-      <div className="empty-card">
-        <h1>Abre un PDF para editarlo</h1>
-        <p>
-          Arrastra un archivo aquí o ábrelo desde tu equipo. El documento se analiza en tu navegador: nada se sube a
-          ningún servidor.
-        </p>
-        <div className="empty-actions">
-          <button className="btn primary lg" onClick={onOpen}>
-            Abrir PDF
-          </button>
-          <button className="btn lg" onClick={onSample}>
-            Probar con un ejemplo
-          </button>
+      <div className="dropzone">
+        <div>
+          <h1>Abre un PDF y corrígelo renglón por renglón</h1>
+          <p>
+            Arrastra el archivo a esta zona o búscalo en tu equipo. Luego haz clic en cualquier línea del documento
+            para cambiarla.
+          </p>
+          <div className="empty-actions">
+            <button className="btn primary lg" onClick={onOpen}>
+              <FolderOpen size={18} aria-hidden />
+              Elegir un PDF
+            </button>
+            <button className="btn lg" onClick={onSample}>
+              Probar con un ejemplo
+            </button>
+          </div>
+          <div className="empty-foot">
+            <Lock size={14} aria-hidden />
+            Tu archivo se procesa en este navegador y nunca se sube a un servidor.
+          </div>
+        </div>
+        <div className="sheet" aria-hidden>
+          <i />
+          <i />
+          <i />
+          <span className="fixed">
+            <svg className="mark" viewBox="0 0 200 20" preserveAspectRatio="none">
+              <path d="M2 11 C 60 7, 120 13, 198 9" pathLength={1} />
+            </svg>
+          </span>
+          <span className="new-line" />
+          <i />
+          <i />
+          <i />
+          <i />
         </div>
       </div>
     </div>

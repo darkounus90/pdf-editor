@@ -5,14 +5,18 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./brand": "./src/components/Brand.tsx",
     "./styles.css": "./src/styles.css"
   },
-  "sideEffects": ["**/*.css"],
+  "sideEffects": [
+    "**/*.css"
+  ],
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@pdf-editor/pdf-core": "workspace:*"
+    "@pdf-editor/pdf-core": "workspace:*",
+    "lucide-react": "^1.56.0"
   },
   "peerDependencies": {
     "react": "^19.0.0",

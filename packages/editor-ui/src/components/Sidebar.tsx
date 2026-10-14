@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState, type ReactNode } from "react";
+import { History, Info, ListChecks, ScanSearch, Search as SearchIcon, TriangleAlert } from "lucide-react";
 import {
   addedToObject,
   blockToObject,
@@ -12,6 +13,12 @@ import {
 } from "@pdf-editor/pdf-core";
 
 type Tab = "analysis" | "search" | "changes";
+
+const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
+  { id: "analysis", label: "Análisis", icon: <ScanSearch size={15} aria-hidden /> },
+  { id: "search", label: "Buscar", icon: <SearchIcon size={15} aria-hidden /> },
+  { id: "changes", label: "Cambios", icon: <ListChecks size={15} aria-hidden /> },
+];
 
 interface Props {
   info: DocInfo;
@@ -31,20 +38,30 @@ export function Sidebar(props: Props) {
   return (
     <aside className="sidebar">
       <div className="tabs" role="tablist">
-        <button role="tab" className={tab === "analysis" ? "active" : ""} onClick={() => setTab("analysis")}>
-          Análisis
-        </button>
-        <button role="tab" className={tab === "search" ? "active" : ""} onClick={() => setTab("search")}>
-          Buscar
-        </button>
-        <button role="tab" className={tab === "changes" ? "active" : ""} onClick={() => setTab("changes")}>
-          Cambios {changes > 0 && <span className="badge">{changes}</span>}
-        </button>
+        <span
+          className="thumb"
+          aria-hidden
+          style={{ transform: `translateX(calc(${TABS.findIndex((t) => t.id === tab)} * (100% + 2px)))` }}
+        />
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            role="tab"
+            aria-selected={tab === t.id}
+            className={tab === t.id ? "active" : ""}
+            onClick={() => setTab(t.id)}
+          >
+            {t.id === "changes" && changes > 0 ? <span className="badge">{changes}</span> : t.icon}
+            {t.label}
+          </button>
+        ))}
       </div>
       <div className="sidebar-body">
-        {tab === "analysis" && <Analysis info={props.info} blocks={props.blocks} />}
-        {tab === "search" && <Search {...props} />}
-        {tab === "changes" && <Changes {...props} />}
+        <div className="tab-panel" key={tab} role="tabpanel">
+          {tab === "analysis" && <Analysis info={props.info} blocks={props.blocks} />}
+          {tab === "search" && <Search {...props} />}
+          {tab === "changes" && <Changes {...props} />}
+        </div>
       </div>
     </aside>
   );
@@ -140,7 +157,7 @@ function Analysis({ info, blocks }: { info: DocInfo; blocks: TextBlock[][] }) {
               <Row key={k} k={k} v={v!} />
             ))}
         </dl>
-        {!info.title && !info.author && !info.producer && <p className="muted">Sin metadatos.</p>}
+        {!info.title && !info.author && !info.producer && <p className="muted small">Este PDF no trae metadatos.</p>}
       </section>
 
       <section>
@@ -152,6 +169,7 @@ function Analysis({ info, blocks }: { info: DocInfo; blocks: TextBlock[][] }) {
         </div>
         {scanned && (
           <p className="warn">
+            <TriangleAlert size={16} aria-hidden />
             {stats.emptyPages.length === info.numPages
               ? "El documento no tiene texto seleccionable: probablemente es un escaneo y necesitaría OCR para editarse."
               : `Páginas sin texto (posibles imágenes escaneadas): ${stats.emptyPages.join(", ")}.`}
@@ -249,8 +267,8 @@ function Search({ blocks, state, search, onSearchChange, onReplaceAll, onGoTo }:
         />
         Distinguir mayúsculas
       </label>
-      <button className="btn primary block" disabled={!total} onClick={onReplaceAll}>
-        Reemplazar todo{total ? ` (${total})` : ""}
+      <button className="btn primary block" disabled={!total || !search.query} onClick={onReplaceAll}>
+        Reemplazar todo{total ? <span className="count">{total}</span> : null}
       </button>
       {search.query && (
         <p className="muted small">{total ? `${total} coincidencias en ${results.length} líneas` : "Sin coincidencias"}</p>
@@ -260,7 +278,7 @@ function Search({ blocks, state, search, onSearchChange, onReplaceAll, onGoTo }:
           <li key={obj.id}>
             <button onClick={() => onGoTo(obj)}>
               <span className="pg">Pág. {obj.pageIndex + 1}</span>
-              <span className="snippet">{obj.text}</span>
+              <span className="snippet">{highlight(obj.text, search.query, search.caseSensitive)}</span>
             </button>
           </li>
         ))}
@@ -292,7 +310,14 @@ function Changes({ blocks, state, onGoTo, onRestore }: Props) {
     return list.sort((a, b) => a.obj.pageIndex - b.obj.pageIndex);
   }, [blocks, state]);
 
-  if (!items.length) return <p className="muted">Aún no hay cambios. Haz clic sobre cualquier texto del documento para editarlo.</p>;
+  if (!items.length)
+    return (
+      <div className="empty-panel">
+        <History size={28} strokeWidth={1.6} aria-hidden />
+        <strong>Todavía no hay cambios</strong>
+        Haz clic en cualquier línea del documento para corregirla. Cada cambio aparecerá aquí y podrás restaurarlo.
+      </div>
+    );
 
   return (
     <>
@@ -304,7 +329,7 @@ function Changes({ blocks, state, onGoTo, onRestore }: Props) {
                 Pág. {obj.pageIndex + 1} · {label}
               </span>
               {obj.block && obj.block.text !== obj.text && <span className="snippet old">{obj.block.text}</span>}
-              <span className={`snippet ${obj.deleted ? "old" : ""}`}>{obj.text || "(vacío)"}</span>
+              <span className={`snippet ${obj.deleted ? "old" : "new"}`}>{obj.text || "(vacío)"}</span>
             </button>
             {obj.kind === "block" && (
               <button className="link" onClick={() => onRestore(obj.id)}>
@@ -315,11 +340,21 @@ function Changes({ blocks, state, onGoTo, onRestore }: Props) {
         ))}
       </ul>
       <p className="note">
-        Al descargar, el texto original de cada línea editada se borra del archivo y el nuevo se escribe en su lugar.
-        Si una línea no se puede borrar con seguridad (texto dentro de un Form XObject, fuentes Type3 o con codificación
-        no estándar, capas OCR invisibles, PDFs cifrados), se tapa con el color de fondo y su original sigue dentro del
-        archivo; el aviso de descarga indica cuántas quedaron así.
+        <Info size={15} aria-hidden />
+        <span>
+          Al descargar, el texto original de cada línea corregida se borra del archivo. Si alguna no se puede borrar con
+          seguridad (por ejemplo, texto dentro de una capa de OCR o un PDF cifrado), se tapa con el color de fondo y te
+          avisamos cuántas quedaron así.
+        </span>
       </p>
     </>
   );
+}
+
+/** Marca con resaltador las coincidencias de la búsqueda dentro de un texto. */
+function highlight(text: string, query: string, caseSensitive: boolean): ReactNode {
+  const re = searchRegExp(query, caseSensitive);
+  if (!re) return text;
+  const parts = text.split(new RegExp(`(${re.source})`, re.flags));
+  return parts.map((part, i) => (i % 2 === 1 ? <mark key={i}>{part}</mark> : <Fragment key={i}>{part}</Fragment>));
 }

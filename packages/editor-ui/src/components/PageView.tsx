@@ -163,7 +163,13 @@ export function PageView({ pdf, info, blocks, objects }: Props) {
   return (
     <div className="page" id={`page-${info.index}`} ref={containerRef} style={{ width: cssW, height: cssH }}>
       <canvas ref={canvasRef} style={{ width: cssW, height: cssH }} />
-      {rendering && <div className="page-loading">Renderizando…</div>}
+      {rendering && (
+        <div className="page-loading" role="status" aria-label="Cargando página">
+          {Array.from({ length: 14 }, (_, i) => (
+            <i key={i} />
+          ))}
+        </div>
+      )}
       <div
         ref={overlayRef}
         className={`overlay mode-${api.mode}`}

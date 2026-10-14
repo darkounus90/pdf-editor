@@ -1,4 +1,5 @@
-import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
+import { Bold, GripVertical, Italic, Minus, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { FAMILY_LABEL, hexToRgb, rgbToHex, type Family, type TextObject } from "@pdf-editor/pdf-core";
 import { useEditor } from "../context";
 
@@ -12,8 +13,8 @@ interface Props {
 /** Barra contextual sobre el texto seleccionado: mover, fuente, tamaño, estilo, color y borrar. */
 export function FloatingToolbar({ obj, anchor, pageHeight, onGrip }: Props) {
   const api = useEditor();
-  const above = anchor.top > 52;
-  const top = above ? anchor.top - 46 : Math.min(anchor.top + anchor.height + 8, pageHeight - 40);
+  const above = anchor.top > 56;
+  const top = above ? anchor.top - 50 : Math.min(anchor.top + anchor.height + 10, pageHeight - 44);
   const size = Math.round(obj.fontSize * 10) / 10;
 
   // Mantiene el foco en el campo de texto al usar la barra.
@@ -23,20 +24,23 @@ export function FloatingToolbar({ obj, anchor, pageHeight, onGrip }: Props) {
   };
 
   return (
-    <div className="ftb" style={{ left: anchor.left, top }} onPointerDown={keepFocus}>
+    <div
+      className="ftb"
+      role="toolbar"
+      aria-label="Formato del texto"
+      style={{ left: anchor.left, top, transformOrigin: above ? "bottom left" : "top left" }}
+      onPointerDown={keepFocus}
+    >
       <button
         className="ftb-btn ftb-grip"
         title="Arrastrar para mover"
+        aria-label="Mover"
         onPointerDown={(e) => {
           e.stopPropagation();
           onGrip(e);
         }}
       >
-        <Icon>
-          <circle cx="9" cy="6" r="1.4" /><circle cx="15" cy="6" r="1.4" />
-          <circle cx="9" cy="12" r="1.4" /><circle cx="15" cy="12" r="1.4" />
-          <circle cx="9" cy="18" r="1.4" /><circle cx="15" cy="18" r="1.4" />
-        </Icon>
+        <GripVertical size={16} />
       </button>
       <span className="ftb-sep" />
       <select
@@ -51,8 +55,8 @@ export function FloatingToolbar({ obj, anchor, pageHeight, onGrip }: Props) {
           </option>
         ))}
       </select>
-      <button className="ftb-btn" title="Reducir tamaño" onClick={() => api.update(obj, { fontSize: Math.max(4, size - 1) })}>
-        −
+      <button className="ftb-btn" title="Reducir tamaño" aria-label="Reducir tamaño" onClick={() => api.update(obj, { fontSize: Math.max(4, size - 1) })}>
+        <Minus size={15} />
       </button>
       <input
         className="ftb-size"
@@ -67,58 +71,40 @@ export function FloatingToolbar({ obj, anchor, pageHeight, onGrip }: Props) {
           if (v >= 4 && v <= 200) api.update(obj, { fontSize: v });
         }}
       />
-      <button className="ftb-btn" title="Aumentar tamaño" onClick={() => api.update(obj, { fontSize: Math.min(200, size + 1) })}>
-        +
+      <button className="ftb-btn" title="Aumentar tamaño" aria-label="Aumentar tamaño" onClick={() => api.update(obj, { fontSize: Math.min(200, size + 1) })}>
+        <Plus size={15} />
       </button>
       <span className="ftb-sep" />
       <button
         className={`ftb-btn ${obj.bold ? "on" : ""}`}
         title="Negrita"
-        style={{ fontWeight: 700 }}
+        aria-label="Negrita"
+        aria-pressed={obj.bold}
         onClick={() => api.update(obj, { bold: !obj.bold })}
       >
-        B
+        <Bold size={15} strokeWidth={2.4} />
       </button>
       <button
         className={`ftb-btn ${obj.italic ? "on" : ""}`}
         title="Cursiva"
-        style={{ fontStyle: "italic", fontFamily: "Georgia, serif" }}
+        aria-label="Cursiva"
+        aria-pressed={obj.italic}
         onClick={() => api.update(obj, { italic: !obj.italic })}
       >
-        I
+        <Italic size={15} />
       </button>
       <label className="ftb-color" title="Color del texto" style={{ background: rgbToHex(obj.color) }}>
-        <input type="color" value={rgbToHex(obj.color)} onChange={(e) => api.update(obj, { color: hexToRgb(e.target.value) })} />
+        <input type="color" aria-label="Color del texto" value={rgbToHex(obj.color)} onChange={(e) => api.update(obj, { color: hexToRgb(e.target.value) })} />
       </label>
       <span className="ftb-sep" />
       {obj.kind === "block" && obj.modified && (
-        <button className="ftb-btn" title="Restaurar original" onClick={() => api.restore(obj.id)}>
-          <Icon>
-            <path d="M3 12a9 9 0 1 0 3-6.7" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" />
-            <path d="M3 4v5h5" fill="none" strokeWidth="2" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
-          </Icon>
+        <button className="ftb-btn" title="Restaurar original" aria-label="Restaurar original" onClick={() => api.restore(obj.id)}>
+          <RotateCcw size={15} />
         </button>
       )}
-      <button className="ftb-btn danger" title="Eliminar texto" onClick={() => api.remove(obj)}>
-        <Icon>
-          <path
-            d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </Icon>
+      <button className="ftb-btn danger" title="Eliminar texto" aria-label="Eliminar texto" onClick={() => api.remove(obj)}>
+        <Trash2 size={15} />
       </button>
     </div>
-  );
-}
-
-function Icon({ children }: { children: ReactNode }) {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      {children}
-    </svg>
   );
 }
