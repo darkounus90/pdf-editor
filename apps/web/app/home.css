@@ -1,0 +1,149 @@
+/* Portada. Reutiliza los tokens (--accent, --panel…) y botones de @pdf-editor/editor-ui/styles.css. */
+
+.home {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.home-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: 1040px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 16px 24px;
+}
+
+.home a.btn {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.home-hero {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 56px 24px 40px;
+  text-align: center;
+}
+
+.home-hero h1 {
+  margin: 0 0 14px;
+  font-size: clamp(30px, 5vw, 44px);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+}
+
+.home-hero p {
+  margin: 0 auto 28px;
+  max-width: 560px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.home-cta {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.home-section {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 24px 24px 32px;
+}
+
+.home-section h2 {
+  margin: 0 0 16px;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+}
+
+.home-features,
+.home-steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.home-features {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.home-steps {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.home-features li,
+.home-steps li {
+  background: var(--panel);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.home-features span,
+.home-steps span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.home-steps .home-step-n {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 650;
+  font-size: 13px;
+  display: grid;
+  place-items: center;
+}
+
+.home-footer {
+  margin-top: auto;
+  padding: 32px 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.editor-loading {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--muted);
+}
+
+@media (max-width: 900px) {
+  .home-features {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .home-steps {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .home-features {
+    grid-template-columns: 1fr;
+  }
+  .home-hero {
+    padding-top: 32px;
+  }
+}

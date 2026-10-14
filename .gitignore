@@ -1,4 +1,11 @@
 node_modules
 dist
-public/pdfjs
+.next
+.turbo
+coverage
 *.tsbuildinfo
+next-env.d.ts
+
+# Copiados en cada dev/build desde pdfjs-dist y tests/corpus
+apps/web/public/pdfjs
+apps/web/public/ejemplo.pdf

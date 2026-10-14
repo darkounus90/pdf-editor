@@ -1,0 +1,27 @@
+{
+  "name": "@pdf-editor/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "assets": "node scripts/copy-pdfjs-assets.mjs",
+    "dev": "node scripts/copy-pdfjs-assets.mjs && next dev --port 5173",
+    "build": "node scripts/copy-pdfjs-assets.mjs && next build",
+    "start": "next start --port 5173",
+    "typecheck": "next typegen && tsc --noEmit"
+  },
+  "dependencies": {
+    "@pdf-editor/editor-ui": "workspace:*",
+    "@pdf-editor/pdf-core": "workspace:*",
+    "next": "^16.4.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@pdf-editor/config": "workspace:*",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "typescript": "^7.0.2"
+  }
+}

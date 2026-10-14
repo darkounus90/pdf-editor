@@ -1,0 +1,10 @@
+{
+  "name": "@pdf-editor/config",
+  "version": "0.1.0",
+  "private": true,
+  "files": ["tsconfig.base.json", "tsconfig.react.json"],
+  "exports": {
+    "./tsconfig.base.json": "./tsconfig.base.json",
+    "./tsconfig.react.json": "./tsconfig.react.json"
+  }
+}

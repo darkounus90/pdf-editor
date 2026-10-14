@@ -1,27 +1,19 @@
 {
   "name": "pdf-editor",
   "private": true,
-  "version": "0.1.0",
-  "type": "module",
-  "scripts": {
-    "predev": "node scripts/copy-pdfjs-assets.mjs",
-    "dev": "vite",
-    "prebuild": "node scripts/copy-pdfjs-assets.mjs",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview",
-    "sample": "node scripts/make-sample.mjs"
+  "packageManager": "pnpm@12.11.2",
+  "engines": {
+    "node": ">=22"
   },
-  "dependencies": {
-    "pdf-lib": "^1.17.1",
-    "pdfjs-dist": "^6.4.299",
-    "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+  "scripts": {
+    "dev": "turbo run dev --filter=@pdf-editor/web",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "sample": "pnpm --filter @pdf-editor/pdf-core sample"
   },
   "devDependencies": {
-    "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
-    "@vitejs/plugin-react": "^6.1.2",
-    "typescript": "^7.0.2",
-    "vite": "^8.3.4"
+    "turbo": "^2.11.8",
+    "typescript": "^7.0.2"
   }
 }

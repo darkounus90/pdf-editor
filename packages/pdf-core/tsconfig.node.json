@@ -1,0 +1,11 @@
+{
+  // Comprueba que el núcleo compila sin los tipos del DOM, así puede correr en
+  // Node (API, CLI, pruebas). Lo que necesita canvas o document va en browser.ts.
+  "extends": "@pdf-editor/config/tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "types": ["node"]
+  },
+  "include": ["src"],
+  "exclude": ["src/browser.ts"]
+}

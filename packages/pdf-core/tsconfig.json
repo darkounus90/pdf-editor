@@ -1,0 +1,8 @@
+{
+  "extends": "@pdf-editor/config/tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node"]
+  },
+  "include": ["src", "tests", "vitest.config.ts"]
+}

@@ -1,0 +1,4 @@
+{
+  "extends": "@pdf-editor/config/tsconfig.react.json",
+  "include": ["src"]
+}
