@@ -92,6 +92,18 @@ Para actualizar a la última versión de `main`:
 ~/renglon/deploy/update.sh
 ```
 
+### Despliegue automático
+
+`deploy/auto-update.sh` corre por cron cada 5 minutos en el servidor: si `main` avanzó en GitHub y la CI de ese commit terminó en verde, ejecuta `update.sh`. Si la CI falló, no despliega ese commit. El servidor solo lee de GitHub, así que no hay llaves del servidor guardadas en el repositorio.
+
+Instalarlo (una vez, en el servidor):
+
+```bash
+bash ~/renglon/deploy/install-auto-update.sh
+```
+
+Ver qué ha desplegado: `tail ~/renglon-deploy.log`.
+
 Para probar la salida de producción sin Docker: `NEXT_OUTPUT=standalone pnpm --filter @pdf-editor/web build`.
 
 ## Qué hace
