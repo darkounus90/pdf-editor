@@ -92,6 +92,20 @@ Para actualizar a la última versión de `main`:
 ~/renglon/deploy/update.sh
 ```
 
+### Anuncios y contacto
+
+Los anuncios de Google AdSense solo se cargan en las páginas públicas (portada, guías, legales), que viven en el grupo `apps/web/app/(sitio)`. El editor queda fuera de ese grupo a propósito: ningún script de terceros debe tener acceso al documento que se está editando.
+
+Se configuran en `deploy/.env` y se fijan al compilar la imagen:
+
+| Variable | Qué hace |
+| --- | --- |
+| `ADSENSE_CLIENT` | Identificador de editor (`ca-pub-…`). Activa el script de AdSense y genera `/ads.txt`. |
+| `ADSENSE_SLOT` | Id de un bloque de anuncios adaptable; muestra los espacios manuales. |
+| `CONTACT_EMAIL` | Correo que aparece en Privacidad y Términos. |
+
+Después de cambiarlas: `cd ~/renglon/deploy && docker compose up -d --build`. En local, `ADS_PREVIEW=1` muestra recuadros de prueba en lugar de anuncios.
+
 ### Despliegue automático
 
 `deploy/auto-update.sh` corre por cron cada 5 minutos en el servidor: si `main` avanzó en GitHub y la CI de ese commit terminó en verde, ejecuta `update.sh`. Si la CI falló, no despliega ese commit. El servidor solo lee de GitHub, así que no hay llaves del servidor guardadas en el repositorio.

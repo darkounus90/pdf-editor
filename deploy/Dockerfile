@@ -5,7 +5,11 @@ RUN npm install -g pnpm@12.11.2
 WORKDIR /repo
 COPY . .
 RUN pnpm install --frozen-lockfile
-ENV NEXT_OUTPUT=standalone NEXT_TELEMETRY_DISABLED=1
+# Configuración del sitio público (deploy/.env). Se fija al compilar.
+ARG ADSENSE_CLIENT=""
+ARG ADSENSE_SLOT=""
+ARG CONTACT_EMAIL=""
+ENV NEXT_OUTPUT=standalone NEXT_TELEMETRY_DISABLED=1     ADSENSE_CLIENT=$ADSENSE_CLIENT ADSENSE_SLOT=$ADSENSE_SLOT CONTACT_EMAIL=$CONTACT_EMAIL
 RUN pnpm --filter @pdf-editor/web build
 
 FROM node:24-bookworm-slim AS run

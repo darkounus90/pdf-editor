@@ -7,6 +7,10 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile
+      args:
+        ADSENSE_CLIENT: ${ADSENSE_CLIENT:-}
+        ADSENSE_SLOT: ${ADSENSE_SLOT:-}
+        CONTACT_EMAIL: ${CONTACT_EMAIL:-}
     restart: unless-stopped
     expose:
       - "8080"
