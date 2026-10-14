@@ -2,14 +2,69 @@
 
 Editor de PDF que corre 100 % en el navegador: analiza el documento y permite editar su texto en línea. Ningún archivo se sube a un servidor.
 
-## Uso
+## Estructura
 
-```bash
-npm install
-npm run dev
+Monorepo con [pnpm workspaces](https://pnpm.io/workspaces) y [Turborepo](https://turborepo.com):
+
+```
+apps/
+  web/              Next.js (App Router): portada en / y el editor en /editar-pdf
+packages/
+  pdf-core/         Motor: análisis, estado de edición, borrado del texto original y exportación
+  editor-ui/        Componentes React del editor (PdfEditor, PageView, Sidebar…) y sus estilos
+  config/           tsconfig base compartido
 ```
 
-Abre http://localhost:5173, arrastra un PDF o pulsa **Probar con un ejemplo** (`public/ejemplo.pdf`, se regenera con `npm run sample`).
+- **`@pdf-editor/pdf-core`** no depende de React ni del DOM, así puede reutilizarse en una API, un SDK o una app de escritorio. Lo que necesita el navegador (render en canvas, colores leídos de los píxeles, medir texto, descargar) vive en `@pdf-editor/pdf-core/browser`. pdf.js se inyecta con `configurePdfjs()`: en el navegador lo hace `setupBrowserPdfjs()` y en Node se pasa el build `pdfjs-dist/legacy`. El chequeo de tipos compila el núcleo sin los tipos del DOM para que no se cuele una dependencia del navegador.
+- **`@pdf-editor/editor-ui`** exporta `<PdfEditor assetsUrl sampleUrl autoLoadSample homeHref />` y `styles.css`.
+- **`apps/web`** monta el editor como componente solo de cliente (`next/dynamic` con `ssr: false`). Antes de `dev` y `build`, `scripts/copy-pdfjs-assets.mjs` copia a `public/pdfjs` el worker de pdf.js y sus fuentes estándar, cmaps, wasm e ICC (de la misma versión de `pdfjs-dist` que usa el núcleo), y a `public/ejemplo.pdf` el PDF de ejemplo del corpus.
+
+Los paquetes se consumen como código TypeScript fuente (Next los transpila con `transpilePackages`), así que no tienen paso de build propio.
+
+## Comandos
+
+Requiere Node 22 o superior y pnpm (la versión está fijada en `packageManager`; con Corepack: `corepack enable pnpm`).
+
+```bash
+pnpm install
+```
+
+```bash
+pnpm dev
+```
+
+Abre http://localhost:5173. La portada enlaza al editor (`/editar-pdf`); ahí arrastra un PDF o pulsa **Probar con un ejemplo** (`/editar-pdf?ejemplo` lo abre directamente).
+
+| Comando | Qué hace |
+| --- | --- |
+| `pnpm dev` | Servidor de desarrollo de la app web en el puerto 5173. |
+| `pnpm build` | Build de producción de todo el monorepo (Turborepo cachea lo que no cambió). |
+| `pnpm test` | Pruebas de `pdf-core` con Vitest. |
+| `pnpm typecheck` | Chequeo de tipos de todos los paquetes. |
+| `pnpm sample` | Regenera `packages/pdf-core/tests/corpus/ejemplo.pdf`. |
+
+Para trabajar en un solo paquete: `pnpm --filter @pdf-editor/pdf-core test:watch`, `pnpm --filter @pdf-editor/web dev`, etc.
+
+## Pruebas
+
+Las pruebas viven en `packages/pdf-core/tests` y corren en Node con el build legacy de pdf.js:
+
+- `analyze.test.ts`: metadatos y agrupación de fragmentos en líneas (columnas separadas por un espacio ancho, celdas de tabla, párrafos).
+- `editor.test.ts`: historial (aplicar, deshacer, rehacer) y buscar/reemplazar.
+- `export.test.ts`: exportar → reabrir → comprobar con `getTextContent` que el texto editado aparece, que el original se borró del archivo y que el resto de la línea sigue intacto.
+- `corpus.test.ts`: prueba de humo sobre cada PDF de `tests/corpus/`.
+
+```bash
+pnpm test
+```
+
+```bash
+pnpm --filter @pdf-editor/pdf-core test:watch
+```
+
+Para sumar PDFs reales (anonimizados) al corpus, ver [`packages/pdf-core/tests/corpus/README.md`](packages/pdf-core/tests/corpus/README.md).
+
+La CI (`.github/workflows/ci.yml`) instala, chequea tipos, corre las pruebas y hace el build en cada push a `main` y en cada pull request.
 
 ## Qué hace
 
@@ -22,12 +77,14 @@ Abre http://localhost:5173, arrastra un PDF o pulsa **Probar con un ejemplo** (`
 
 ## Cómo funciona
 
+Las rutas son relativas a `packages/pdf-core/src`.
+
 | Etapa | Archivo | Detalle |
 | --- | --- | --- |
-| Lectura y render | `src/pdf/analyze.ts` | pdf.js extrae los fragmentos de texto con su posición y los agrupa en líneas (misma fuente, tamaño y línea base; los huecos grandes separan columnas y celdas). Al renderizar cada página se lee la fuente real y se estima el color del texto y del fondo a partir de los píxeles. |
-| Estado | `src/state/editor.ts` | Las ediciones se guardan como diferencias sobre el bloque original, con historial. |
-| Borrado del original | `src/pdf/contentStream.ts`, `src/pdf/eraseText.ts` | Se decodifica el flujo de contenido de cada página editada, se tokeniza (cadenas, arreglos, imágenes en línea) y se sigue el estado gráfico y de texto (`q`/`Q`/`cm`, `BT`, `Tm`, `Td`, `TD`, `T*`, `TL`, `Tf`, `Tc`, `Tw`, `Tz`, `Ts`, `Tr`) calculando la caja de cada glifo con los anchos de la fuente. Los glifos que caen por completo dentro del rectángulo de un bloque editado se cambian por un desplazamiento `TJ` equivalente, así el resto de la línea no se mueve aunque esté en el mismo operador. El flujo viejo se elimina del archivo. |
-| Exportación | `src/pdf/export.ts` | Con pdf-lib se escribe el texto nuevo con la fuente estándar equivalente (Helvetica, Times o Courier). Los bloques que no se pudieron borrar se tapan, como respaldo, con un rectángulo del color de fondo. |
+| Lectura y render | `analyze.ts`, `browser.ts` | pdf.js extrae los fragmentos de texto con su posición y los agrupa en líneas (misma fuente, tamaño y línea base; los huecos grandes separan columnas y celdas). Al renderizar cada página se lee la fuente real y se estima el color del texto y del fondo a partir de los píxeles. |
+| Estado | `editor.ts` | Las ediciones se guardan como diferencias sobre el bloque original, con historial. |
+| Borrado del original | `contentStream.ts`, `eraseText.ts` | Se decodifica el flujo de contenido de cada página editada, se tokeniza (cadenas, arreglos, imágenes en línea) y se sigue el estado gráfico y de texto (`q`/`Q`/`cm`, `BT`, `Tm`, `Td`, `TD`, `T*`, `TL`, `Tf`, `Tc`, `Tw`, `Tz`, `Ts`, `Tr`) calculando la caja de cada glifo con los anchos de la fuente. Los glifos que caen por completo dentro del rectángulo de un bloque editado se cambian por un desplazamiento `TJ` equivalente, así el resto de la línea no se mueve aunque esté en el mismo operador. El flujo viejo se elimina del archivo. |
+| Exportación | `export.ts` | Con pdf-lib se escribe el texto nuevo con la fuente estándar equivalente (Helvetica, Times o Courier). Los bloques que no se pudieron borrar se tapan, como respaldo, con un rectángulo del color de fondo. |
 
 ## Limitaciones conocidas
 
