@@ -33,7 +33,7 @@ export interface CheckoutParams {
   reference: string;
   amountInCents: number;
   currency?: string;
-  redirectUrl: string;
+  redirectUrl?: string;
   expirationTime?: string;
 }
 
@@ -46,8 +46,8 @@ export function checkoutUrl(config: Pick<WompiConfig, "publicKey" | "integritySe
     "amount-in-cents": String(p.amountInCents),
     reference: p.reference,
     "signature:integrity": integritySignature(p.reference, p.amountInCents, currency, config.integritySecret, p.expirationTime),
-    "redirect-url": p.redirectUrl,
   });
+  if (p.redirectUrl) params.set("redirect-url", p.redirectUrl);
   if (p.expirationTime) params.set("expiration-time", p.expirationTime);
   return `${CHECKOUT_URL}?${params}`;
 }
