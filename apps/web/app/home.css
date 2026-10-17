@@ -1463,6 +1463,16 @@ html {
   color: var(--red);
 }
 
+.footer-credit a {
+  font-weight: 650;
+  color: var(--ink-2);
+  text-underline-offset: 3px;
+}
+
+.footer-credit a:hover {
+  color: var(--red);
+}
+
 /* ---------- Responsivo ---------- */
 
 @media (max-width: 1000px) {

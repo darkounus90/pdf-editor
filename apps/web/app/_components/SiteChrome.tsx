@@ -35,6 +35,12 @@ export function SiteFooter() {
         <Link href="/terminos">Términos</Link>
       </nav>
       <span>© {new Date().getFullYear()} Renglón</span>
+      <span className="footer-credit">
+        Hecho por{" "}
+        <a href="https://onnyxsoftware.online/" target="_blank" rel="noopener">
+          Onnyx Software
+        </a>
+      </span>
     </footer>
   );
 }
