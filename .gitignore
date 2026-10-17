@@ -12,3 +12,7 @@ apps/web/public/ejemplo.pdf
 
 # Variables del servidor
 deploy/.env
+
+# Base de datos local (PGlite) y variables de desarrollo
+apps/web/.data
+apps/web/.env*.local

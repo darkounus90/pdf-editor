@@ -14,3 +14,7 @@ minimumReleaseAgeExclude:
   - next@16.4.1
   - react-dom@19.3.1
   - react@19.3.1
+# esbuild (lo usa drizzle-kit) trae su binario como dependencia opcional; su
+# script de instalación solo lo verifica, así que no hace falta ejecutarlo.
+allowBuilds:
+  esbuild: false
