@@ -31,7 +31,7 @@ const FAQ = [
   },
   {
     q: "¿Cuánto cuesta?",
-    a: "Nada. Puedes abrir, corregir y descargar tus PDF sin pagar y sin crear una cuenta.",
+    a: "El plan gratis no cuesta nada ni pide cuenta: abres, corriges y descargas tus PDF con un límite de descargas al día. Si necesitas más, el pase semanal o el plan Pro quitan los límites y los anuncios; los valores están en la página de precios.",
   },
   {
     q: "¿Se mantiene la fuente original?",
@@ -217,7 +217,7 @@ export default function HomePage() {
               <Lock size={16} aria-hidden /> Sin subir archivos
             </li>
             <li>
-              <Check size={16} aria-hidden /> Sin cuentas ni correos
+              <Check size={16} aria-hidden /> Sin cuenta para usarlo gratis
             </li>
             <li>
               <CloudOff size={16} aria-hidden /> Nada que borrar después en la nube
