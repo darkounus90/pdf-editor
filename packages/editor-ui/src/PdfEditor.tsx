@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type DragEvent } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type DragEvent, type ReactNode } from "react";
 import {
   CircleAlert,
   CircleCheck,
@@ -11,6 +11,7 @@ import {
   MousePointer2,
   Plus,
   Redo2,
+  Sparkles,
   TextCursorInput,
   Undo2,
 } from "lucide-react";
@@ -69,9 +70,34 @@ export interface PdfEditorProps {
   autoLoadSample?: boolean;
   /** Si se indica, el logo de la barra enlaza aquí (p. ej. la portada). */
   homeHref?: string;
+  /**
+   * Se consulta antes de generar cada descarga (p. ej. para validar en el servidor
+   * los límites del plan). Si devuelve `ok: false`, la descarga no se hace y se
+   * muestra el mensaje con su botón.
+   */
+  beforeDownload?: (info: { pages: number; fileName: string }) => Promise<DownloadGate>;
+  /** Se llama después de cada descarga exitosa. */
+  onDownloaded?: () => void;
+  /** Contenido extra a la derecha de la barra superior (plan, cuenta…). */
+  topbarExtra?: ReactNode;
 }
 
-export function PdfEditor({ assetsUrl = "/pdfjs/", sampleUrl = "/ejemplo.pdf", autoLoadSample = false, homeHref }: PdfEditorProps) {
+/** Respuesta de `beforeDownload`. */
+export type DownloadGate =
+  | { ok: true }
+  | { ok: false; title: string; message: string; actionLabel?: string; actionHref?: string };
+
+type BlockedDownload = Extract<DownloadGate, { ok: false }>;
+
+export function PdfEditor({
+  assetsUrl = "/pdfjs/",
+  sampleUrl = "/ejemplo.pdf",
+  autoLoadSample = false,
+  homeHref,
+  beforeDownload,
+  onDownloaded,
+  topbarExtra,
+}: PdfEditorProps) {
   const [doc, setDoc] = useState<LoadedDoc | null>(null);
   const [blocks, setBlocks] = useState<TextBlock[][]>([]);
   const [history, dispatch] = useReducer(historyReducer, initialHistory);
@@ -83,6 +109,7 @@ export function PdfEditor({ assetsUrl = "/pdfjs/", sampleUrl = "/ejemplo.pdf", a
   const [busy, setBusy] = useState<{ text: string; progress?: number } | null>(null);
   const [toast, setToast] = useState<{ text: string; kind: "ok" | "error" } | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [blocked, setBlocked] = useState<BlockedDownload | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const textSession = useRef(true);
   const lastStyle = useRef<TextStyle>({ fontSize: 12, family: "sans", bold: false, italic: false, color: [0, 0, 0] });
@@ -251,6 +278,13 @@ export function PdfEditor({ assetsUrl = "/pdfjs/", sampleUrl = "/ejemplo.pdf", a
     setDraft(null);
     setBusy({ text: "Generando tu PDF…" });
     try {
+      if (beforeDownload) {
+        const gate = await beforeDownload({ pages: doc.info.numPages, fileName: doc.info.fileName });
+        if (!gate.ok) {
+          setBlocked(gate);
+          return;
+        }
+      }
       // Las páginas editadas que nunca se renderizaron (p. ej. por reemplazar todo)
       // necesitan colores y fuentes antes de exportar.
       const touchedPages = new Set<number>();
@@ -280,6 +314,7 @@ export function PdfEditor({ assetsUrl = "/pdfjs/", sampleUrl = "/ejemplo.pdf", a
             : `${coveredBlocks} líneas no se pudieron borrar del archivo: quedaron tapadas y su texto original sigue dentro.`,
         );
       notify(notes.join(" "));
+      onDownloaded?.();
     } catch (err) {
       console.error(err);
       notify("No se pudo generar el PDF.", "error");
@@ -414,6 +449,7 @@ export function PdfEditor({ assetsUrl = "/pdfjs/", sampleUrl = "/ejemplo.pdf", a
           )}
 
           <div className="actions">
+            {topbarExtra}
             <button className={`btn ${doc ? "ghost" : ""}`} onClick={() => fileInput.current?.click()} title="Abrir otro PDF">
               <FolderOpen size={16} aria-hidden />
               <span>Abrir</span>
@@ -491,6 +527,7 @@ export function PdfEditor({ assetsUrl = "/pdfjs/", sampleUrl = "/ejemplo.pdf", a
             {toast.text}
           </div>
         )}
+        {blocked && <BlockedDialog blocked={blocked} onClose={() => setBlocked(null)} />}
         {dragOver && (
           <div className="drop-zone">
             <div>
@@ -501,6 +538,37 @@ export function PdfEditor({ assetsUrl = "/pdfjs/", sampleUrl = "/ejemplo.pdf", a
         )}
       </div>
     </EditorContext.Provider>
+  );
+}
+
+function BlockedDialog({ blocked, onClose }: { blocked: BlockedDownload; onClose: () => void }) {
+  const close = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    close.current?.focus();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return (
+    <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="blocked-title">
+        <span className="modal-icon" aria-hidden>
+          <Sparkles size={22} />
+        </span>
+        <h2 id="blocked-title">{blocked.title}</h2>
+        <p>{blocked.message}</p>
+        <div className="modal-actions">
+          <button ref={close} className="btn" onClick={onClose}>
+            Ahora no
+          </button>
+          {blocked.actionHref && (
+            <a className="btn primary" href={blocked.actionHref}>
+              {blocked.actionLabel ?? "Ver planes"}
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 

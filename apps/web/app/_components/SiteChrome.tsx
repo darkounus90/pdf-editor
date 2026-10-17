@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Brand } from "@pdf-editor/editor-ui/brand";
+import { AccountLink } from "./PlanProvider";
 
 export function SiteNav() {
   return (
@@ -11,7 +12,9 @@ export function SiteNav() {
           <Link href="/guias">Guías</Link>
           <a href="/#privacidad">Privacidad</a>
           <a href="/#preguntas">Preguntas</a>
+          <Link href="/precios">Precios</Link>
         </nav>
+        <AccountLink />
         <Link href="/editar-pdf" className="btn primary">
           Abrir un PDF
         </Link>
@@ -27,6 +30,7 @@ export function SiteFooter() {
       <nav aria-label="Pie de página">
         <Link href="/editar-pdf">Editar un PDF</Link>
         <Link href="/guias">Guías</Link>
+        <Link href="/precios">Precios</Link>
         <Link href="/privacidad">Privacidad</Link>
         <Link href="/terminos">Términos</Link>
       </nav>
