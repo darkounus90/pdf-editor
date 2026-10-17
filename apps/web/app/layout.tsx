@@ -3,6 +3,7 @@ import { Archivo } from "next/font/google";
 import type { ReactNode } from "react";
 import "@pdf-editor/editor-ui/styles.css";
 import "./home.css";
+import "./account.css";
 
 // Una sola familia con eje de ancho: expandida para titulares, normal para la interfaz.
 const archivo = Archivo({

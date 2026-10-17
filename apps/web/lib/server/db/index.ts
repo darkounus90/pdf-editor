@@ -8,6 +8,7 @@
  * En ambos casos las migraciones de apps/web/drizzle se aplican una vez, la
  * primera vez que se pide la conexión.
  */
+import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import { schema } from "./schema";
@@ -21,6 +22,7 @@ export async function createPgliteDb(dataDir?: string): Promise<Db> {
   const { PGlite } = await import("@electric-sql/pglite");
   const { drizzle } = await import("drizzle-orm/pglite");
   const { migrate } = await import("drizzle-orm/pglite/migrator");
+  if (dataDir) mkdirSync(dataDir, { recursive: true });
   const client = dataDir ? new PGlite(dataDir) : new PGlite();
   const db = drizzle(client, { schema });
   await migrate(db, { migrationsFolder: migrationsFolder() });

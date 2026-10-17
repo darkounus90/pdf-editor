@@ -1,0 +1,20 @@
+# Postgres para desarrollo local (opcional: sin Docker, `pnpm dev` usa PGlite).
+#   docker compose -f deploy/docker-compose.dev.yml up -d
+#   DATABASE_URL=postgres://renglon:renglon@127.0.0.1:5433/renglon   (en apps/web/.env.local)
+# El puerto se publica solo en 127.0.0.1 para no exponerlo a la red.
+name: renglon-dev
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: renglon
+      POSTGRES_USER: renglon
+      POSTGRES_PASSWORD: renglon
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pg_dev:/var/lib/postgresql/data
+
+volumes:
+  pg_dev:

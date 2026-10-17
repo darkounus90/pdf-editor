@@ -1,5 +1,5 @@
 # Producción en el VPS. Solo Caddy publica puertos (80/443): los puertos que
-# publica Docker se saltan ufw, así que la web queda en la red interna.
+# publica Docker se saltan ufw, así que la web y la base quedan en la red interna.
 name: renglon
 
 services:
@@ -12,10 +12,52 @@ services:
         ADSENSE_SLOT: ${ADSENSE_SLOT:-}
         CONTACT_EMAIL: ${CONTACT_EMAIL:-}
     restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    # Configuración que se lee al arrancar (no hace falta recompilar para cambiarla).
+    environment:
+      DATABASE_URL: postgres://renglon:${POSTGRES_PASSWORD}@db:5432/renglon
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Falta BETTER_AUTH_SECRET en deploy/.env}
+      BETTER_AUTH_URL: https://${DOMAIN}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      SMTP_URL: ${SMTP_URL:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      WOMPI_PUBLIC_KEY: ${WOMPI_PUBLIC_KEY:-}
+      WOMPI_PRIVATE_KEY: ${WOMPI_PRIVATE_KEY:-}
+      WOMPI_INTEGRITY_SECRET: ${WOMPI_INTEGRITY_SECRET:-}
+      WOMPI_EVENTS_SECRET: ${WOMPI_EVENTS_SECRET:-}
+      PRICE_WEEKLY_COP: ${PRICE_WEEKLY_COP:-}
+      PRICE_PRO_MONTHLY_COP: ${PRICE_PRO_MONTHLY_COP:-}
+      PRICE_PRO_YEARLY_COP: ${PRICE_PRO_YEARLY_COP:-}
+      FREE_DAILY_DOWNLOADS: ${FREE_DAILY_DOWNLOADS:-}
+      FREE_DAILY_PAGES: ${FREE_DAILY_PAGES:-}
+      CRON_SECRET: ${CRON_SECRET:-}
     expose:
       - "8080"
     mem_limit: 768m
     cpus: 2
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: renglon
+      POSTGRES_USER: renglon
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en deploy/.env}
+    # Pocas conexiones y memoria acotada: el VPS es compartido.
+    command: ["postgres", "-c", "max_connections=40", "-c", "shared_buffers=64MB"]
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U renglon -d renglon"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    mem_limit: 384m
 
   caddy:
     image: caddy:2.10-alpine
@@ -38,3 +80,4 @@ services:
 volumes:
   caddy_data:
   caddy_config:
+  pg_data:

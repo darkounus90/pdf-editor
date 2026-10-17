@@ -18,6 +18,9 @@ ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=8080 HOSTNAME=0.0.0.0
 COPY --from=build --chown=node:node /repo/apps/web/.next/standalone ./
 COPY --from=build --chown=node:node /repo/apps/web/.next/static ./apps/web/.next/static
 COPY --from=build --chown=node:node /repo/apps/web/public ./apps/web/public
+# Migraciones de la base: se aplican al arrancar (apps/web/instrumentation.ts).
+COPY --from=build --chown=node:node /repo/apps/web/drizzle ./apps/web/drizzle
+ENV MIGRATIONS_DIR=/app/apps/web/drizzle
 USER node
 EXPOSE 8080
 CMD ["node", "apps/web/server.js"]
